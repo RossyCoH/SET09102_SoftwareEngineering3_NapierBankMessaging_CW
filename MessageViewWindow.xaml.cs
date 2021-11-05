@@ -10,22 +10,18 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
-using NapierBankMessaging.ViewModels;
 
 namespace NapierBankMessaging
 {
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// Interaction logic for MessageViewWindow.xaml
     /// </summary>
-    public partial class MainWindow : Window
+    public partial class MessageViewWindow : Window
     {
-        public MainWindow()
+        public MessageViewWindow()
         {
             InitializeComponent();
-
-            this.DataContext = new MainWindowViewModel();
         }
     }
 }
