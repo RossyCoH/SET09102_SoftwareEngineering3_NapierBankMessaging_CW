@@ -12,9 +12,9 @@ namespace NapierBankMessaging.Models
         private string sender;
         private string[] URL;
 
-        public Email(string Header) : base(Header)
+        public Email(string Header, string msgBody, string mSender) : base(Header, msgBody)
         {
-
+            sender = mSender;
         }
     }
 }

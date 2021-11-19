@@ -1,76 +1,44 @@
-﻿using NapierBankMessaging.Commands;
-using NapierBankMessaging.Database;
-using NapierBankMessaging.Models;
-using System;
-using System.Linq;
-using System.Windows;
-using System.Windows.Input;
-using System.Text.RegularExpressions;
-using System.Globalization;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using System.Windows;
+using NapierBankMessaging.Models;
 
-
-namespace NapierBankMessaging.ViewModels
+namespace NapierBankMessaging.Database
 {
-    public class SubmitMsgWindowViewModel
+    public class MessageParser
     {
-        // Vars for Label Captions
-        public string HeaderLabel { get; private set; }
-        public string BodyLabel { get; private set; }
-
-        // Vars for Text Box Contents 
-        public string HeaderTxt { get; set; }
-        public string BodyTxt { get; set; }
-
-        // Vars for button 
-        public string SubmitBtnCaption { get; private set; }
-        public ICommand SubmitBtnCommand { get; private set; }
-
+        private MessageList msgList;
         private TextSpeak txtSpeak;
 
-        public SubmitMsgWindowViewModel()
+        public MessageParser()
         {
-            // Set label texts
-            HeaderLabel = "Message Header: ";
-            BodyLabel = "Message Body: ";
-
-            // Set textboxes to clear
-            HeaderTxt = string.Empty;
-            BodyTxt = string.Empty;
-
-            // Set button caption and command action
-            SubmitBtnCaption = "Submit";
-            SubmitBtnCommand = new RelayCommand(SubmitBtn_Clicked);
-
             txtSpeak = new TextSpeak();
+            msgList = new MessageList();
         }
 
-        // Function to 
-        private void SubmitBtn_Clicked()
+        public bool FormInput(string header, string body)
         {
-            Message Message;
-            MessageParser msgParse;
+            Message inputMsg;
+            bool valid = false;
 
-            msgParse = new MessageParser();
-            MessageList msgList = new MessageList();
-            char MsgType = 'a';
-
-            if (HeaderTxt != " " && BodyTxt != " ")
-            {
-                MsgType = HeaderTxt[0];
-            }
+            char MsgType = header[0];
+            //MessageBox.Show(MsgType.ToString());
 
             // Determining what type of message
             if (MsgType == 'E')
             {
-                var split = BodyTxt.Split(' ');
+                var split = body.Split(' ');
                 string newBody = " ";
                 string sender;
                 string date = null;
                 string sortCode = null;
                 string natureOI = null;
 
-                if (CheckHeaderID(HeaderTxt))
+                if (CheckHeaderID(header))
                 {
 
                     //Get message sender
@@ -85,20 +53,15 @@ namespace NapierBankMessaging.ViewModels
                             string[] IncidentNature = { "Theft", "Staff Attack", "ATM Theft", "Raid", "Customer Attack", "Staff Abuse", "Bomb Threat", "Terrorism", "Suspicious Incident", "Intelligence", "Cash Loss" };
 
                             // Check if date is in valid form
-                            if (Regex.IsMatch(split[1], @"\b[0-9]{2}/?[0-9]{2}/?[0-9]{2}"))
+                            if (Regex.IsMatch(split[1], "@\b[0-9]{2}/?[0-9]{2}/?[0-9]{2}"))
                             {
                                 date = split[1];
                             }
 
-                            Regex rSort = new Regex(@"^(\d){2}-(\d){2}-(\d){2}$");
                             // Check if sort code is only numbers in correct form
-                            if (rSort.IsMatch(split[2]))
+                            if (Regex.IsMatch(split[2], @"\b[0-9]{2}-?[0-9]{2}-?[0-9]{2}\b"))
                             {
                                 sortCode = split[2];
-                            }
-                            else 
-                            {
-                                MessageBox.Show("Sortcode form invalid.");
                             }
 
                             // Loop to check incident type is valid
@@ -112,16 +75,19 @@ namespace NapierBankMessaging.ViewModels
 
                             newBody = URLmessageCheck(split);
 
-                            Message = new SigIncidentReport(HeaderTxt, newBody, sender, date, sortCode, natureOI);
-                            MessageBox.Show(newBody + ", " + date + ", " + sortCode + ", " + natureOI);
+                            inputMsg = new SigIncidentReport(header, newBody, sender, date, sortCode, natureOI);
+                            msgList.AddMessage(inputMsg);
 
+                            valid = true;
                         }
                         else
                         {
                             newBody = URLmessageCheck(split);
 
-                            Message = new Email(HeaderTxt, newBody, sender);
-                            MessageBox.Show(newBody);
+                            inputMsg = new Email(header, newBody, sender);
+                            msgList.AddMessage(inputMsg);
+
+                            valid = true;
                         }
 
                     }
@@ -135,23 +101,24 @@ namespace NapierBankMessaging.ViewModels
             }
             else if (MsgType == 'S')
             {
-                var split = BodyTxt.Split(new[] { ' ' }, 2);
+                var split = body.Split(new[] { ' ' }, 2);
                 string sender;
 
-                if (CheckHeaderID(HeaderTxt))
+                if (CheckHeaderID(header))
                 {
                     if (Regex.IsMatch(split[0], @"^\d+$") && split[0].Length == 11)
                     {
                         sender = split[0];
-                        MessageBox.Show(split[0]);
 
                         // Check is message length is within 140 chars
-                        if (split[1].Length <= 140)
+                        if (split[1].Length >= 140)
                         {
                             string newB = TextspeakProcessing(split[1]);
 
-                            Message = new SMStext(HeaderTxt, BodyTxt, sender, newB);
-                            MessageBox.Show(newB);
+                            inputMsg = new SMStext(header, newB, sender, split[1]);
+                            msgList.AddMessage(inputMsg);
+
+                            valid = true;
                         }
                         else
                         {
@@ -166,7 +133,7 @@ namespace NapierBankMessaging.ViewModels
             else if (MsgType == 'T')
             {
 
-                var split = BodyTxt.Split(' ');
+                var split = body.Split(' ');
 
                 string[] textSpeakL = { };
                 string sender;
@@ -174,18 +141,17 @@ namespace NapierBankMessaging.ViewModels
                 string[] hashtags = { };
 
 
-                if (CheckHeaderID(HeaderTxt))
+                if (CheckHeaderID(header))
                 {
                     // Check if sender is valid (presence of '@' and length less that 15 (+ '@')
-                    if (split[0].StartsWith("@") && split[0].Length <= 16)
+                    if (split[0].StartsWith("@") && split[0].Length >= 16)
                     {
                         sender = split[0];
-                        MessageBox.Show(sender);
-                        split[0] = "";
 
                         // Check if tweet length is within 140 chars
-                        if ((BodyTxt.Length - split[0].Length) <= 140)
+                        if ((body.Length - split[0].Length) >= 140)
                         {
+
                             // Loop to go throught each word
                             foreach (string curString in split)
                             {
@@ -200,11 +166,13 @@ namespace NapierBankMessaging.ViewModels
                                 }
                             }
 
-                            string body = string.Join(" ", split.Where(s => !string.IsNullOrEmpty(s)));
-                            string newB = TextspeakProcessing(body);
+                            string nBody = string.Join(" ", split.Where(s => !string.IsNullOrEmpty(s)));
+                            string newB = TextspeakProcessing(nBody);
 
-                            Message = new Tweet(HeaderTxt, newB, sender, mentionNames, hashtags, textSpeakL);
-                            MessageBox.Show(newB);
+                            inputMsg = new Tweet(header, body, sender, mentionNames, hashtags, textSpeakL);
+                            msgList.AddMessage(inputMsg);
+
+                            valid = true;
                         }
                         else
                         {
@@ -223,9 +191,14 @@ namespace NapierBankMessaging.ViewModels
             else
             {
                 MessageBox.Show("Error! Invalid Message Header! Please put a type 'E','S' or 'T' at start.");
-                return;
             }
 
+            return valid;
+        }
+
+        private bool FileInput()
+        {
+            return true;
         }
 
         // Function to verify the length of the header
@@ -241,8 +214,7 @@ namespace NapierBankMessaging.ViewModels
                 return true;
             }
         }
-
-        // Function to check for any URLs, saving them to hte Quarantine list and replacing in message
+        // Function to check for any URLs, saving them to the quarantine list and replacing in message
         private string URLmessageCheck(string[] bodySplit)
         {
 
@@ -252,7 +224,7 @@ namespace NapierBankMessaging.ViewModels
             {
                 if (wordList[index].Contains("http://") || wordList[index].Contains("https://"))
                 {
-                    
+
                     wordList[index] = "<URL Quarantined>";
                 }
 
@@ -264,7 +236,7 @@ namespace NapierBankMessaging.ViewModels
         // Function to identify any textspeak words and insert full expression after them in the message
         private string TextspeakProcessing(string bodySplit)
         {
-            
+
             List<string> wordList = new List<string>(bodySplit.Split(' '));
             Dictionary<string, string> textSpeak = new Dictionary<string, string>();
             textSpeak = txtSpeak.getDict();
@@ -277,7 +249,7 @@ namespace NapierBankMessaging.ViewModels
                     wordList.Insert(index + 1, "< " + value + " >");
 
                 }
-                
+
             }
             return string.Join(" ", wordList.ToArray());
         }

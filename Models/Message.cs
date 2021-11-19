@@ -6,14 +6,25 @@ using System.Threading.Tasks;
 
 namespace NapierBankMessaging.Models
 {
-    class Message
+    public class Message
     {
-        private string idNum;
+        private string header;
         private string body;
 
-        public Message(string id)
+        public Message(string id, string msgBody)
         {
-            idNum = id;
+            header = id;
+            body = msgBody;
+        }
+
+        public string GetHeader()
+        {
+            return header;
+        }
+
+        public string GetBody()
+        {
+            return body;
         }
     }
 }

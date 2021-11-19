@@ -10,9 +10,9 @@ namespace NapierBankMessaging.Models
     {
         private string Sender;
         private string Text;
-        private string[] TextSpeak;
+        //private string[] TextSpeak;
 
-        public SMStext(string Header, string SenderNo, string text) : base(Header)
+        public SMStext(string Header, string msgBody, string SenderNo, string text) : base(Header, msgBody)
         {
             Sender = SenderNo;
             Text = text;

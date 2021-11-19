@@ -11,6 +11,8 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using NapierBankMessaging.ViewModels;
+using NapierBankMessaging.Models;
 
 namespace NapierBankMessaging
 {
@@ -19,9 +21,10 @@ namespace NapierBankMessaging
     /// </summary>
     public partial class MessageViewWindow : Window
     {
-        public MessageViewWindow()
+        public MessageViewWindow(List<Message> msgList)
         {
             InitializeComponent();
+            this.DataContext = new MessageViewWindowViewModel(msgList);
         }
     }
 }
